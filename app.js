@@ -209,8 +209,8 @@
 
   $("btnEndRestart").addEventListener("click", function () {
     endModal.hidden = true;
-    startScreen.hidden = false;
-    refreshStartScreen();
+    newSession();
+    beginGame();
   });
 
   // ================================================================
