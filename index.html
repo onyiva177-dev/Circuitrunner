@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Circuit Runner — programming maze puzzle</title>
+<meta name="description" content="Program a robot with recursive colour-triggered functions to reach the star before your 90-minute attempt runs out. 32 hand-built levels." />
+<meta name="theme-color" content="#14151b" />
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Circuit Runner" />
+<meta name="mobile-web-app-capable" content="yes" />
+
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===================== START / RESUME SCREEN ===================== -->
+<section id="startScreen" class="overlay-screen">
+  <div class="start-card">
+    <div class="start-logo" aria-hidden="true">
+      <span class="logo-cell c-purple"></span><span class="logo-cell c-teal"></span><span class="logo-cell c-orange"></span>
+    </div>
+    <h1>Circuit Runner</h1>
+    <p class="start-tag">Program a robot with three recursive, colour-triggered functions. Reach the star before the clock runs out.</p>
+
+    <div class="start-stats">
+      <div><span id="bestLevelStat">1</span><label>Best level reached</label></div>
+      <div><span id="bestTimeStat">—</span><label>Attempt length</label></div>
+    </div>
+
+    <button id="btnResume" class="btn btn-primary" hidden>Resume attempt</button>
+    <button id="btnNewGame" class="btn btn-primary">Start new attempt (1h 30m)</button>
+    <button id="btnHowTo" class="btn btn-ghost">How it works</button>
+  </div>
+</section>
+
+<!-- ===================== HOW-TO MODAL ===================== -->
+<section id="howToModal" class="overlay-screen" hidden>
+  <div class="start-card howto-card">
+    <h2>How it works</h2>
+    <ul class="howto-list">
+      <li><strong>Goal.</strong> Move the diamond-shaped robot onto the <span class="dot star-dot"></span> star tile.</li>
+      <li><strong>Void kills.</strong> Stepping off the coloured path (into the dark background) ends the attempt for that try — hit <strong>Reset</strong> to put the robot back and try again.</li>
+      <li><strong>Three functions.</strong> <span class="dot c-purple"></span> F1, <span class="dot c-teal"></span> F2 and <span class="dot c-orange"></span> F3 each hold a short sequence of instructions. F1 always runs first.</li>
+      <li><strong>Colour-triggered calls.</strong> A "call F1/F2/F3" instruction only actually fires when the robot is currently standing on a tile of that same colour — otherwise it's skipped. This is how you branch.</li>
+      <li><strong>Loop counters.</strong> Tap a placed call instruction to give it a use-limit (1–5) instead of unlimited (∞), so a self-call can repeat a fixed number of times — handy for long corridors.</li>
+      <li><strong>The clock.</strong> One attempt = 90 minutes across every level. Your furthest level ever reached is saved on this device even after time runs out.</li>
+    </ul>
+    <button id="btnCloseHowTo" class="btn btn-primary">Got it</button>
+  </div>
+</section>
+
+<!-- ===================== MAIN GAME ===================== -->
+<main id="gameScreen" hidden>
+
+  <header class="topbar">
+    <button id="btnMenu" class="icon-btn" title="Level select" aria-label="Level select">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="topbar-mid">
+      <div class="timer-row">
+        <span id="timerLabel">1:30:00</span>
+        <div class="timer-track"><div id="timerFill" class="timer-fill"></div></div>
+      </div>
+      <div class="level-row">Level <span id="levelNum">1</span> — <span id="levelName">First Steps</span></div>
+    </div>
+    <button id="btnPause" class="icon-btn" title="Pause attempt" aria-label="Pause attempt">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+    </button>
+  </header>
+
+  <div class="toolbar">
+    <button id="btnPlay" class="ctl-btn" title="Play"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4z" fill="currentColor"/></svg></button>
+    <button id="btnStep" class="ctl-btn" title="Step"><svg viewBox="0 0 24 24"><path d="M5 5l9 7-9 7V5zM17 5v14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
+    <button id="btnReset" class="ctl-btn" title="Reset robot"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.6 5.9M4 12V6m0 6h6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button id="btnClear" class="ctl-btn" title="Clear program"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+    <button id="btnSpeed" class="ctl-btn ctl-speed" title="Playback speed">1x</button>
+  </div>
+
+  <div id="msgBar" class="msg-bar"></div>
+
+  <div id="boardWrap" class="board-wrap">
+    <div id="trace" class="trace"></div>
+    <div id="board" class="board"></div>
+  </div>
+
+  <nav class="fn-tabs" id="fnTabs">
+    <button class="fn-tab fn-tab-purple active" data-fn="F1">F1</button>
+    <button class="fn-tab fn-tab-teal" data-fn="F2">F2</button>
+    <button class="fn-tab fn-tab-orange" data-fn="F3">F3</button>
+  </nav>
+
+  <div id="slotsRow" class="slots-row"></div>
+
+  <div class="toolbox" id="toolbox">
+    <button class="tool-btn" data-op="fwd" title="Move forward"><svg viewBox="0 0 24 24"><path d="M12 4v16M6 10l6-6 6 6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="tool-btn" data-op="left" title="Turn left"><svg viewBox="0 0 24 24"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 0 0-10" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="tool-btn" data-op="right" title="Turn right"><svg viewBox="0 0 24 24"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 0 1 0-10" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="tool-btn tool-call tool-purple" data-op="f1" title="Call F1">F1</button>
+    <button class="tool-btn tool-call tool-teal" data-op="f2" title="Call F2">F2</button>
+    <button class="tool-btn tool-call tool-orange" data-op="f3" title="Call F3">F3</button>
+  </div>
+
+</main>
+
+<!-- ===================== LEVEL SELECT ===================== -->
+<section id="levelSelect" class="overlay-screen" hidden>
+  <div class="start-card wide-card">
+    <h2>Levels</h2>
+    <div id="levelGrid" class="level-grid"></div>
+    <button id="btnCloseLevels" class="btn btn-ghost">Close</button>
+  </div>
+</section>
+
+<!-- ===================== END-OF-SESSION MODAL ===================== -->
+<section id="endModal" class="overlay-screen" hidden>
+  <div class="start-card">
+    <h2 id="endTitle">Time's up</h2>
+    <p id="endBody" class="start-tag"></p>
+    <button id="btnEndRestart" class="btn btn-primary">Start new attempt</button>
+  </div>
+</section>
+
+<!-- ===================== INSTALL BANNER ===================== -->
+<div id="installBanner" class="install-banner" hidden>
+  <span id="installText">Install Circuit Runner for quick access, even offline.</span>
+  <button id="btnInstall" class="btn btn-primary btn-small">Install</button>
+  <button id="btnInstallDismiss" class="icon-btn icon-btn-small" aria-label="Dismiss">✕</button>
+</div>
+
+<script src="engine.js"></script>
+<script src="levels.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
