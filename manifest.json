@@ -2,7 +2,7 @@
   "name": "Circuit Runner",
   "short_name": "Circuit Runner",
   "description": "Program a robot with recursive colour-triggered functions to reach the star before your 90-minute attempt runs out.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#101117",
